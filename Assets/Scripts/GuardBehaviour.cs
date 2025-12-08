@@ -39,15 +39,15 @@ public class GuardBehaviour : MonoBehaviour
     }
     void Start() //Initial start for patrolling
     {
-        if(Waypoints.Length > 0)
+        if (Waypoints.Length > 0)
         {
-            _agent.SetDestination(Waypoints[_currentIndex].position);
+            _agent.SetDestination(Waypoints[_currentIndex].position); //If the agent has an agent but there is no baked navmesh, it will throw an error and not move
         }
     }
 
     void Update() //Main state machine update
     {
-        switch (CurrentState)
+        switch (CurrentState) //Without using enums this would be a mess of bools and nested if statements
         {
             case GuardState.Patrolling:
                 UpdatePatrol();
@@ -71,15 +71,19 @@ public class GuardBehaviour : MonoBehaviour
             return;
         }
 
-        if(IsPlayerInFieldOfView())
+        if (IsPlayerInFieldOfView())
         {
             CurrentState = GuardState.Chasing;
             return;
         }
 
+        //The difference between a path and the movement along the path is that the path is the calculated route to the destination,
+        //while the movement along the path is the actual traversal of that route by the agent.
+
+        //The reason why we check pathPending first is to ensure we don't prematurely check remainingDistance while the path is still being calculated.
         if (!_agent.pathPending && _agent.remainingDistance <= WaypointTolerance)
         {
-            _currentIndex = (_currentIndex + 1) % Waypoints.Length;
+            _currentIndex = (_currentIndex + 1) % Waypoints.Length; //If we didn't use modulo, the index would go out of bounds
             _agent.SetDestination(Waypoints[_currentIndex].position);
         }
     }
@@ -89,7 +93,7 @@ public class GuardBehaviour : MonoBehaviour
         float distanceToPlayer = Vector3.Distance(transform.position, Player.position);
         if (distanceToPlayer > LoseRange || !IsPlayerInFieldOfView())
         {
-            CurrentState = GuardState.ReturningToPatrol;
+            CurrentState = GuardState.Searching;
             _lastKnownPlayerPosition = Player.position;
             _searchTimer = SearchDuration;
             _agent.SetDestination(_lastKnownPlayerPosition);
@@ -110,12 +114,12 @@ public class GuardBehaviour : MonoBehaviour
             return;
         }
 
-        if(!_agent.pathPending && _agent.remainingDistance > WaypointTolerance)
+        if (!_agent.pathPending && _agent.remainingDistance > WaypointTolerance)
         {
             return;
         }
 
-        if(_searchTimer <= 0f)
+        if (_searchTimer <= 0f)
         {
             CurrentState = GuardState.ReturningToPatrol;
             _agent.SetDestination(Waypoints[_currentIndex].position);
@@ -124,7 +128,7 @@ public class GuardBehaviour : MonoBehaviour
 
     void UpdateReturning() //When returning to patrol, check if player is seen first, else go to last known position then back to patrol
     {
-        if(IsPlayerInFieldOfView())
+        if (IsPlayerInFieldOfView())
         {
             CurrentState = GuardState.Chasing;
             return;
@@ -142,7 +146,7 @@ public class GuardBehaviour : MonoBehaviour
         Vector3 directionToPlayer = (Player.position - transform.position).normalized;
         float distanceToPlayer = Vector3.Distance(transform.position, Player.position);
 
-        if(distanceToPlayer > ChaseRange)
+        if (distanceToPlayer > ChaseRange)
         {
             return false;
         }
@@ -150,15 +154,15 @@ public class GuardBehaviour : MonoBehaviour
         float dotProduct = Vector3.Dot(transform.forward, directionToPlayer);
         float angleToPlayer = Mathf.Acos(dotProduct) * Mathf.Rad2Deg;
 
-        if(angleToPlayer > FieldOfViewAngle / 2f)
+        if (angleToPlayer > FieldOfViewAngle / 2f)
         {
             return false;
         }
 
-        if(Physics.Raycast(transform.position, directionToPlayer, out RaycastHit hitInfo, distanceToPlayer))
+        if (Physics.Raycast(transform.position, directionToPlayer, out RaycastHit hitInfo, distanceToPlayer))
         {
-            if(!hitInfo.transform.CompareTag("Player"))
-            { 
+            if (!hitInfo.transform.CompareTag("Player"))
+            {
                 return false;
             }
         }

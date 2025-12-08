@@ -22,7 +22,7 @@ public class PlayerMovement : MonoBehaviour
         _rb = GetComponent<Rigidbody>();
     }
 
-    void Update()
+    void FixedUpdate() //Physics update isnt every frame, only the frames where physics calculations are done
     {
         _isGrounded = Physics.CheckSphere(_groundCheck.position, _groundDist, _groundLayer);
         Vector3 targetHorizontalVelocity = new Vector3(_moveDirection.x * _moveSpeed, 0f, _moveDirection.z * _moveSpeed);
@@ -30,7 +30,7 @@ public class PlayerMovement : MonoBehaviour
         _rb.linearDamping = _isGrounded ? _groundDrag : _airDrag;
     }
 
-    public void OnMove(CallbackContext context)
+    public void OnMove(CallbackContext context) //Forward is the blue arrow and green arrow is up, y is vertical axis, z is forward axis
     {
         Vector2 input = context.ReadValue<Vector2>();
         _moveDirection = new Vector3(input.x, 0f, input.y);
