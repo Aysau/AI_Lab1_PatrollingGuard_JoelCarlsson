@@ -146,7 +146,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3149019669575208215, guid: ea48d29928601f741a9dc36ec7aa3f0c, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0
+      value: -9.05
       objectReference: {fileID: 0}
     - target: {fileID: 3149019669575208215, guid: ea48d29928601f741a9dc36ec7aa3f0c, type: 3}
       propertyPath: m_LocalRotation.w
@@ -341,11 +341,14 @@ MonoBehaviour:
   height: 20
   cellSize: 1
   tilePrefab: {fileID: 3329212282234830419, guid: a542d80ed83fc764ca851fc7dff95946, type: 3}
+  mudMaterial: {fileID: 2100000, guid: ae218fffbda2d6d428edb680176e389f, type: 2}
+  waterMaterial: {fileID: 2100000, guid: f6b9e9b061b7ce943929a459c50b32ed, type: 2}
   walkableMaterial: {fileID: 2100000, guid: 97c3dd868e0b8d7418a8a98a5aa24118, type: 2}
   wallMaterial: {fileID: 2100000, guid: 03c1e20b3937b61458ea24a2936826f8, type: 2}
   pathMaterial: {fileID: 2100000, guid: 23c863a73ad72bf40aff770a4ab2df10, type: 2}
   startMaterial: {fileID: 2100000, guid: ca7b282b41f4aaf48831f9401781463d, type: 2}
   goalMaterial: {fileID: 2100000, guid: 1430939942de76948aa252daa01cfa89, type: 2}
+  paintMode: 3
 --- !u!4 &1170412224
 Transform:
   m_ObjectHideFlags: 0
@@ -490,7 +493,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: '::'
   grid: {fileID: 1170412223}
   moveSpeed: 3
-  repathInterval: 1
+  repathInterval: 0.5
   target: {fileID: 208267466}
 --- !u!1 &1986370210
 GameObject:
@@ -691,8 +694,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2121153203}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.00081616134, y: 0.7324993, z: -0.6807667, w: -0.0008785933}
-  m_LocalPosition: {x: 5.6886983, y: 89.64761, z: 8.220487}
+  m_LocalRotation: {x: 0.0011405362, y: 0.77580184, z: -0.6309741, w: 0.0013947244}
+  m_LocalPosition: {x: 9.236008, y: 26.689926, z: 15.135332}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

@@ -1,5 +1,6 @@
 
 
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -10,12 +11,12 @@ namespace GameAI.Day02_AStar.Grid
                                              //Navmesh gives a polygon mesh that is more smooth and continious as to the tile approach, and it is automatic from geometry.
                                              //Navmesh is also more optimized, but it is harder to change or modify as it is a black box we can use in projects.
 
-                                             //Unity navmesh for a continious world with smooth paths, better performance and less effort.
-                                             //A* griud when it is tile based, per tile rules, visualize/rebuild easily, map changes often and more control over algorithm.
+    //Unity navmesh for a continious world with smooth paths, better performance and less effort.
+    //A* griud when it is tile based, per tile rules, visualize/rebuild easily, map changes often and more control over algorithm.
 
-                                             //For a large map too many a* calls will not work perforamnce wise. With huge grids means thousands of nodes constantly closed and opened.
-                                             //Many repeated cycles that are nearly identical
-                                             //If a new wall is placed all units must recalculate path
+    //For a large map too many a* calls will not work perforamnce wise. With huge grids means thousands of nodes constantly closed and opened.
+    //Many repeated cycles that are nearly identical
+    //If a new wall is placed all units must recalculate path
     {
         [Header("Grid Settings")]
         [SerializeField] private int width = 10;
@@ -24,18 +25,22 @@ namespace GameAI.Day02_AStar.Grid
 
         [Header("Prefabs & Materials")]
         [SerializeField] private GameObject tilePrefab;
+        [SerializeField] private Material mudMaterial;
+        [SerializeField] private Material waterMaterial;
         [SerializeField] private Material walkableMaterial;
         [SerializeField] private Material wallMaterial;
         [SerializeField] private Material pathMaterial;
+        [SerializeField] private Material startMaterial;
+        [SerializeField] private Material goalMaterial;
+
         private Node[,] nodes;
         private Dictionary<GameObject, Node> tileToNode = new();
 
         private Node startNode;
         private Node goalNode;
 
-        [SerializeField] private Material startMaterial;
-        [SerializeField] private Material goalMaterial;
-
+        public enum PaintMode { Road, Mud, Water, Wall }
+        public PaintMode paintMode = PaintMode.Wall;
 
         // Input action for click 
         private InputAction clickAction;
@@ -77,11 +82,19 @@ namespace GameAI.Day02_AStar.Grid
                 clickAction.Disable();
             }
 
-            if(rightClickAction != null)
+            if (rightClickAction != null)
             {
                 rightClickAction.performed -= OnRightClickPerformed;
                 rightClickAction.Disable();
             }
+        }
+
+        private void Update()
+        {
+            if (Keyboard.current.digit1Key.wasPressedThisFrame) paintMode = PaintMode.Road;
+            if (Keyboard.current.digit2Key.wasPressedThisFrame) paintMode = PaintMode.Mud;
+            if (Keyboard.current.digit3Key.wasPressedThisFrame) paintMode = PaintMode.Water;
+            if (Keyboard.current.digit4Key.wasPressedThisFrame) paintMode = PaintMode.Wall;
         }
 
         private void GenerateGrid()
@@ -98,7 +111,7 @@ namespace GameAI.Day02_AStar.Grid
                     worldPos, Quaternion.identity, transform);
                     tileGO.name = $"Tile_{x}_{y}";
 
-                    Node node = new Node(x, y, true, tileGO);
+                    Node node = new Node(x, y, tileGO);
                     nodes[x, y] = node;
                     tileToNode[tileGO] = node;
 
@@ -119,14 +132,14 @@ namespace GameAI.Day02_AStar.Grid
             if (cam == null) return;
 
             Ray ray = cam.ScreenPointToRay(Mouse.current.position.ReadValue());
-            if(Physics.Raycast(ray, out RaycastHit hit))
+            if (Physics.Raycast(ray, out RaycastHit hit))
             {
                 GameObject clicked = hit.collider.gameObject;
-                if(tileToNode.TryGetValue(clicked, out Node node))
+                if (tileToNode.TryGetValue(clicked, out Node node))
                 {
                     SelectStartOrGoal(node);
 
-                    if(startNode != null && goalNode != null)
+                    if (startNode != null && goalNode != null)
                     {
                         RunAStar();
                     }
@@ -140,14 +153,14 @@ namespace GameAI.Day02_AStar.Grid
             if (!node.walkable)
                 return;
 
-            if(startNode == null)
+            if (startNode == null)
             {
                 startNode = node;
                 SetTileMaterial(node, startMaterial);
                 return;
             }
 
-            if(goalNode == null)
+            if (goalNode == null)
             {
                 goalNode = node;
                 SetTileMaterial(node, goalMaterial);
@@ -161,11 +174,11 @@ namespace GameAI.Day02_AStar.Grid
 
         private void ResetStartAndGoal()
         {
-            if(startNode != null)
+            if (startNode != null)
             {
                 SetTileMaterial(startNode, walkableMaterial);
             }
-            if(goalNode != null )
+            if (goalNode != null)
             {
                 SetTileMaterial(goalNode, walkableMaterial);
 
@@ -177,9 +190,9 @@ namespace GameAI.Day02_AStar.Grid
 
         private void ResetTileMaterials()
         {
-            foreach(Node node in nodes)
+            foreach (Node node in nodes)
             {
-                SetTileMaterial(node, node.walkable ? walkableMaterial : wallMaterial);
+                UpdateTileMaterial(node);
             }
         }
 
@@ -197,9 +210,35 @@ namespace GameAI.Day02_AStar.Grid
                 Debug.Log(hit.collider.gameObject.name);
                 if (tileToNode.TryGetValue(clicked, out Node node))
                 {
-                    bool newWalkable = !node.walkable;
-                    SetWalkable(node, newWalkable);
+                    //bool newWalkable = !node.walkable;
+                    //SetWalkable(node, newWalkable);
+                    switch (paintMode)
+                    {
+                        case PaintMode.Road: { node.terrain = TerrainType.Road; } break;
+                        case PaintMode.Mud: { node.terrain = TerrainType.Mud; } break;
+                        case PaintMode.Water: { node.terrain = TerrainType.Water; } break; //Danger or bad tiles now have a proper cost to them
+                        case PaintMode.Wall: { node.terrain = TerrainType.Wall; }  break;
+                    }
+                    UpdateTileMaterial(node);
                 }
+            }
+        }
+
+        private void UpdateTileMaterial(Node node)
+        {
+            Material mat = node.terrain switch
+            {
+                TerrainType.Road => walkableMaterial,
+                TerrainType.Mud => mudMaterial,
+                TerrainType.Water => waterMaterial,
+                TerrainType.Wall => wallMaterial,
+                _ => walkableMaterial
+            };
+
+            var renderer = node.tile.GetComponent<MeshRenderer>();
+            if(renderer != null && mat != null)
+            {
+                renderer.material = mat;
             }
         }
 
@@ -218,29 +257,28 @@ namespace GameAI.Day02_AStar.Grid
             return GetNode(x, y);
         }
 
-        public IEnumerable<Node> GetNeighbours(Node node, bool
+        public IEnumerable<(Node node, bool isDiagonal)> GetNeighbours(Node node, bool
         allowDiagonals = false)
         {
             int x = node.x;
             int y = node.y;
             // 4-neighbour 
-            yield return GetNode(x + 1, y);
-            yield return GetNode(x - 1, y);
-            yield return GetNode(x, y + 1);
-            yield return GetNode(x, y - 1);
+            yield return (GetNode(x + 1, y), false);
+            yield return (GetNode(x - 1, y), false);
+            yield return (GetNode(x, y + 1), false);
+            yield return (GetNode(x, y - 1), false);
 
             if (allowDiagonals)
             {
-                yield return GetNode(x + 1, y + 1);
-                yield return GetNode(x - 1, y + 1);
-                yield return GetNode(x + 1, y - 1);
-                yield return GetNode(x - 1, y - 1);
+                yield return (GetNode(x + 1, y + 1), true);
+                yield return (GetNode(x - 1, y + 1), true);
+                yield return (GetNode(x + 1, y - 1), true);
+                yield return (GetNode(x - 1, y - 1), true);
             }
         }
 
         public void SetWalkable(Node node, bool walkable) //Turning a tile into a wall means making it non-walkable removing all edeges connecting it to neighbours. Basically removing it from the graph.
         {
-            node.walkable = walkable;
             SetTileMaterial(node, walkable ? walkableMaterial :
             wallMaterial);
         }
@@ -254,10 +292,17 @@ namespace GameAI.Day02_AStar.Grid
             }
         }
 
-        private float GetHeuristic(Node first, Node second)
+        //private float GetHeuristic(Node first, Node second)
+        //{
+        //    return(Mathf.Abs(first.x - second.x) + Mathf.Abs(first.y - second.y));
+        //}
+
+        public float GetHeuristic(Node first, Node second) //Makes paths more direct and smooth and generally short
         {
-            return(Mathf.Abs(first.x - second.x) + Mathf.Abs(first.y - second.y));
-        }
+            int dx = Mathf.Abs(first.x - second.x);
+            int dy = Mathf.Abs (first.y - second.y);
+            return (dx > dy) ? 1.4f * dy + (dx - dy) : 1.4f * dx + (dy - dx);
+        } //Ensure it stays admissable by reflecting actual allowed movemtn, matching the diagonal penelty (1.4f). Octile distance is designed for 8 direction a*
 
 
         public List<Node> FindPath(Node startNode, Node goalNode)
@@ -300,12 +345,16 @@ namespace GameAI.Day02_AStar.Grid
                 openSet.Remove(current);
                 closedSet.Add(current);
 
-                foreach (Node neighbour in GetNeighbours(current))
+                foreach (var (neighbour, isDiagonal) in GetNeighbours(current, allowDiagonals: true))
                 {
                     if (neighbour == null || !neighbour.walkable || closedSet.Contains(neighbour))
                         continue;
 
-                    float stepCost = 1f;
+                    float stepCost = neighbour.movementCost; //Avoids expensive tiles as their gCost is higher depending on movementCost which is the expensive tiles
+                    if (isDiagonal)
+                    {
+                        stepCost *= 1.4f;
+                    }
                     float tempG = current.gCost + stepCost; //g(n) calculation
 
                     if (tempG < neighbour.gCost) //If the new is lower it means we found a shorter apth and should update
@@ -313,9 +362,9 @@ namespace GameAI.Day02_AStar.Grid
                         neighbour.parent = current;
                         neighbour.gCost = tempG;
                         neighbour.hCost = GetHeuristic(neighbour, goalNode); //h(n) calculated here
-                                                                            //If we use heuristic overestimates it becomes inadmissable as it breaks astar often.
-                                                                           //If h(n) = 0 for all nodes it would be dijkstra's algorithm
-                                                                           //If g(n) is ignored the goal direction is rushed as it doesn't care about path cost, can find inefficient paths.
+                                                                             //If we use heuristic overestimates it becomes inadmissable as it breaks astar often.
+                                                                             //If h(n) = 0 for all nodes it would be dijkstra's algorithm
+                                                                             //If g(n) is ignored the goal direction is rushed as it doesn't care about path cost, can find inefficient paths.
 
                         if (!openSet.Contains(neighbour))
                         {
@@ -335,9 +384,9 @@ namespace GameAI.Day02_AStar.Grid
 
             ResetTileMaterials();
             List<Node> path = FindPath(startNode, goalNode);
-            if(path == null) return;
+            if (path == null) return;
 
-            foreach(Node node in path)
+            foreach (Node node in path)
             {
                 SetTileMaterial(node, pathMaterial);
             }
