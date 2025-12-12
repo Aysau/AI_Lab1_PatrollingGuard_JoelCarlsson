@@ -1,0 +1,9 @@
+1.Difference between a global path and a steering behaviour is that global is planned ahead of time using a pathfinding system like A* to give a route long term. While a steering behaviour is reactive and calculated each frame, giving instructions on how to move right now.
+
+2. Seek moves full speed to a target and can overshoot, arrive slows down as it gets close which is more natural and less robotic
+
+3. Separation forces agents to avoid crowding and respect personal space, covid style. The group starts spreading out. If separationStrength is low, agents bunch up and overlap, if it is high the group becomes jittery and more chaotic since they push more aggressively.
+
+4. Adding cohesion meant agents pull together more in the center and becomes more unified. Alignment meant they started matching directions like a stream. I didn't add steering with navmesh because of time constraints
+
+5. I will be making some kind of companion system that interacts with the world, and using the steering agent i can smoothly make the companion move between points and follow the player while perhaps also making other types of creatures that could swarm or similar.
